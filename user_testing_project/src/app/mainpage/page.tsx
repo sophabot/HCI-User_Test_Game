@@ -41,14 +41,6 @@ export default function Main() {
     setPosition({ top: centerY, left: centerX });
   }, []);
 
-  //runs when 18 clicks are clicked to refresh 
-  useEffect(() => {
-    if (clicked === 18) {
-      toast("🎉 You clicked 18 times!");
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-    }
-  }, [clicked]);
   const squareStyle = {
     width: '150px',
     height: '150px',
