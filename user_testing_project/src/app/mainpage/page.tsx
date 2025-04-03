@@ -22,8 +22,8 @@ export default function Main() {
     }
 
 
-    const maxX = window.innerWidth - 100;
-    const maxY = window.innerHeight - 100;
+    const maxX = window.innerWidth - 150;
+    const maxY = window.innerHeight - 150;
 
     let newX, newY;
     do {
