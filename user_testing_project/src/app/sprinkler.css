@@ -1,0 +1,30 @@
+.container {
+    position: relative;
+    text-align: center;
+    margin-top: 50px;
+  }
+  
+  .sprinkler {
+    font-size: 2rem;
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: sprinkleFall 1.5s ease-out forwards;
+  }
+  
+  @keyframes sprinkleFall {
+    0% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px) scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: translateX(-50%) translateY(30px) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(80px) scale(0.8);
+    }
+  }
+  
