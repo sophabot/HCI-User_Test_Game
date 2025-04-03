@@ -12,7 +12,7 @@ export default function Main() {
     const newClickCount = clicked + 1;
     setClicked(newClickCount);
 
-    if (newClickCount === 1) {
+    if (newClickCount === 18) {
       toast('18 clicks done! All set to go!✨✨✅')
       setShowConfetti(true);
 
