@@ -9,6 +9,10 @@ export default function Main() {
   const [showConfetti, setShowConfetti] = useState(false);
 
   const handleClick = () => {
+    // Play ding sound on click
+    const clickSound = new Audio('/sounds/ding-12662.mp3');
+    clickSound.play();
+
     const newClickCount = clicked + 1;
     setClicked(newClickCount);
 
