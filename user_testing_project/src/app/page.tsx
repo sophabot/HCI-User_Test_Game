@@ -1,10 +1,21 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Preloader from '@/components/ui/preloader';
 
 export default function TermsPage() {
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
+  const [loading, setLoading] = useState(true) //for the preloader
+
+  useEffect(() => {
+    // Fake loading time (like 2 seconds)for the preloader to load
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   const handleAccept = () => {
     // Store acceptance in localStorage to remember across sessions
@@ -12,13 +23,21 @@ export default function TermsPage() {
     router.push('/mainpage');
   };
 
+  if (loading) {
+    return <Preloader/>; 
+  }
+
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+    <div className="h-screen flex flex-col items-center justify-center p-4 bg-gray-50 ">
       <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold mb-6 text-center">Terms and Conditions</h1>
+      <h1 className="text-4xl font-extrabold mb-4 text-center font-[poppins] text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-blue-300 to-sky-400 drop-shadow-[0_1px_6px_rgba(147,197,253,0.6)]">
+      Welcome!
+      </h1>
+
+        <h1 className="text-3xl font-bold mb-6 text-center font-[poppins]">Terms and Conditions</h1>
         
         <div className="border border-gray-200 p-4 mb-6 h-64 overflow-y-auto rounded">
-          <div className="text-gray-700 space-y-4">
+          <div className="text-gray-700 space-y-4 font-[poppins]">
             <p>
               Please read the following informed consent document. If you consent to the study, 
               click "I have read and accept the terms and conditions," and "Continue to Game." If you do not consent and 
@@ -86,7 +105,7 @@ export default function TermsPage() {
               you are (other inclusion criteria). You also indicate that you agree to the following statement:
             </p>
             
-            <p className="italic">
+            <p className="italic font-[poppins]">
               "I have read this consent form and I understand the risks, benefits, and procedures involved 
               with participation in this research study. I hereby agree to participate in this research study."
             </p>
@@ -101,7 +120,7 @@ export default function TermsPage() {
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
           />
-          <label htmlFor="accept" className="text-gray-800">
+          <label htmlFor="accept" className="text-gray-800 font-[poppins]">
             I have read and accept the terms and conditions
           </label>
         </div>
@@ -109,7 +128,7 @@ export default function TermsPage() {
         <button 
           onClick={handleAccept} 
           disabled={!accepted}
-          className={`w-full py-2 px-4 rounded-md transition duration-200 ${
+          className={`w-full py-2 px-4 rounded-md transition duration-200 font-[poppins] ${
             accepted 
               ? 'bg-blue-600 text-white hover:bg-blue-700' 
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
