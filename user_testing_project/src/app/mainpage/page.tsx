@@ -10,7 +10,7 @@ export default function Main() {
 
   const handleClick = () => {
     // Play ding sound on click
-    const clickSound = new Audio('/sounds/ding-12662.mp3');
+    const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
 
     const newClickCount = clicked + 1;
