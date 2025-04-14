@@ -7,9 +7,22 @@ export default function Main() {
   const [clicked, setClicked] = useState(0);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isRedBox, setIsRedBox] = useState(true);
+  const [blueBoxSize, setBlueBoxSize] = useState(150); 
+
+  // Box sizes
+  const redBoxSize = 10;
+
+  const minBlueBoxSize = 20;
+  const maxBlueBoxSize = 160;
+
+  // Generate random size for blue box
+  const getRandomBlueBoxSize = () => {
+    return Math.floor(Math.random() * (maxBlueBoxSize - minBlueBoxSize + 1)) + minBlueBoxSize;
+  };
 
   const handleClick = () => {
-    // Play ding sound on click
+    // Play ding sound on correct click
     const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
 
@@ -25,30 +38,48 @@ export default function Main() {
       }, 5000);
     }
 
+    // Toggle between center box and random generated pos
+    const nextIsRedBox = !isRedBox;
+    setIsRedBox(nextIsRedBox);
 
-    const maxX = window.innerWidth - 150;
-    const maxY = window.innerHeight - 150;
+    if (nextIsRedBox) {
+      const centerX = (window.innerWidth - redBoxSize) / 2;
+      const centerY = (window.innerHeight - redBoxSize) / 2;
+      setPosition({ top: centerY, left: centerX });
+    } else {
 
-    let newX, newY;
-    do {
-      newX = Math.floor(Math.random() * maxX);
-      newY = Math.floor(Math.random() * maxY);
-    } while (newX === position.left && newY === position.top);
+      const newBlueBoxSize = getRandomBlueBoxSize();
+      setBlueBoxSize(newBlueBoxSize);
+      
+      // Random position for blue box (using new size)
+      const maxX = window.innerWidth - newBlueBoxSize;
+      const maxY = window.innerHeight - newBlueBoxSize;
 
-    setPosition({ top: newY, left: newX });
+      let newX, newY;
+      do {
+        newX = Math.floor(Math.random() * maxX);
+        newY = Math.floor(Math.random() * maxY);
+      } while (newX === position.left && newY === position.top);
+
+      setPosition({ top: newY, left: newX });
+    }
   };
 
   useEffect(() => {
-    const centerX = (window.innerWidth - 100) / 2;
-    const centerY = (window.innerHeight - 100) / 2;
+
+    setBlueBoxSize(getRandomBlueBoxSize());
+    
+    const centerX = (window.innerWidth - redBoxSize) / 2; 
+    const centerY = (window.innerHeight - redBoxSize) / 2; 
     setClicked(0);
     setPosition({ top: centerY, left: centerX });
+    setIsRedBox(true); 
   }, []);
 
   const squareStyle = {
-    width: '150px',
-    height: '150px',
-    backgroundColor: 'skyblue',
+    width: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
+    height: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
+    backgroundColor: isRedBox ? 'red' : 'skyblue',
     position: 'absolute',
     top: position.top,
     left: position.left,
