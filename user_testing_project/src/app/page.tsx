@@ -12,7 +12,7 @@ export default function TermsPage() {
     // Fake loading time (like 2 seconds)for the preloader to load
     const timeout = setTimeout(() => {
       setLoading(false);
-    }, 2000);
+    }, 2500);
 
     return () => clearTimeout(timeout);
   }, []);
