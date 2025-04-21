@@ -13,7 +13,8 @@ export default function Main() {
   const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [lastClickTime, setLastClickTime] = useState<number | null>(null);
-  const [clickData, setClickData] = useState<Array<{size: number, time: number}>>([]);
+  const [clickData, setClickData] = useState<Array<{size: number, time: number, distance: number}>>([]);
+  const [previousBoxPosition, setPreviousBoxPosition] = useState({ top: 0, left: 0 });
 
   // Box sizes
   const redBoxSize = 10;
@@ -23,6 +24,25 @@ export default function Main() {
   // Generate random size for blue box
   const getRandomBlueBoxSize = () => {
     return Math.floor(Math.random() * (maxBlueBoxSize - minBlueBoxSize + 1)) + minBlueBoxSize;
+  };
+
+  // Calculate distance between two box centers
+  const calculateBoxDistance = (pos1: { top: number, left: number }, pos2: { top: number, left: number }, size1: number, size2: number) => {
+
+    const center1 = {
+      x: pos1.left + size1 / 2,
+      y: pos1.top + size1 / 2
+    };
+    
+    const center2 = {
+      x: pos2.left + size2 / 2,
+      y: pos2.top + size2 / 2
+    };
+    
+    // Calculate distance using cool formula 
+    const dx = center2.x - center1.x;
+    const dy = center2.y - center1.y;
+    return Math.sqrt(dx * dx + dy * dy);
   };
 
   const handleClick = () => {
@@ -47,12 +67,22 @@ export default function Main() {
       // Record data point for blue box click
       if (lastClickTime !== null) {
         const timeSinceLastClick = currentTime - lastClickTime;
+        
+        const boxDistance = calculateBoxDistance(
+          position,           // Current blue box pos
+          previousBoxPosition, // Middle pos
+          blueBoxSize,        // Current blue box size
+          redBoxSize
+        );
+        
         const newDataPoint = {
           size: blueBoxSize,
-          time: timeSinceLastClick
+          time: timeSinceLastClick,
+          distance: boxDistance
         };
+        
         setClickData(prev => [...prev, newDataPoint]);
-        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms`);
+        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms, Distance=${boxDistance.toFixed(2)}px`);
       }
     }
     
@@ -73,6 +103,9 @@ export default function Main() {
       }, 5000);
     }
 
+    // Save current pos before changing it
+    setPreviousBoxPosition({ ...position });
+
     // Toggle between center box and random generated pos
     const nextIsRedBox = !isRedBox;
     setIsRedBox(nextIsRedBox);
@@ -85,7 +118,7 @@ export default function Main() {
       const newBlueBoxSize = getRandomBlueBoxSize();
       setBlueBoxSize(newBlueBoxSize);
       
-      // Random position for blue box (using new size)
+      // Random position for blue box 
       const maxX = window.innerWidth - newBlueBoxSize;
       const maxY = window.innerHeight - newBlueBoxSize;
 
@@ -104,11 +137,14 @@ export default function Main() {
     
     const centerX = (window.innerWidth - redBoxSize) / 2; 
     const centerY = (window.innerHeight - redBoxSize) / 2; 
+    const centerPosition = { top: centerY, left: centerX };
+    
     setClicked(0);
-    setMovementStartTime(null);  // Reset timer on page load
-    setLastClickTime(null);      // Reset last click time
-    setClickData([]);            // Reset collected data
-    setPosition({ top: centerY, left: centerX });
+    setMovementStartTime(null);      // Reset timer on page load
+    setLastClickTime(null);          // Reset last click time
+    setClickData([]);                // Reset collected data
+    setPosition(centerPosition);
+    setPreviousBoxPosition(centerPosition);
     setIsRedBox(true);
     setTotalDistance(0);
     setLastMousePos(null); 
