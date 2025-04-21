@@ -12,6 +12,8 @@ export default function Main() {
   const [movementStartTime, setMovementStartTime] = useState<number | null>(null);
   const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState<number | null>(null);
+  const [clickData, setClickData] = useState<Array<{size: number, time: number}>>([]);
 
   // Box sizes
   const redBoxSize = 10;
@@ -28,9 +30,12 @@ export default function Main() {
     const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
 
+    const currentTime = performance.now();
+
     if (clicked === 0) {
-      setMovementStartTime(performance.now());
+      setMovementStartTime(currentTime);
       setTotalDistance(0);
+      setLastClickTime(currentTime);
       console.log('First click — timer started!');
     }
 
@@ -38,14 +43,29 @@ export default function Main() {
     if (!isRedBox) {
       newClickCount = clicked + 1;
       setClicked(newClickCount);
+      
+      // Record data point for blue box click
+      if (lastClickTime !== null) {
+        const timeSinceLastClick = currentTime - lastClickTime;
+        const newDataPoint = {
+          size: blueBoxSize,
+          time: timeSinceLastClick
+        };
+        setClickData(prev => [...prev, newDataPoint]);
+        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms`);
+      }
     }
+    
+    // Update last click time regardless of box color
+    setLastClickTime(currentTime);
 
     if (newClickCount === 18 && movementStartTime !== null) {
-      const endTime = performance.now();
+      const endTime = currentTime;
       const totalTime = endTime - movementStartTime;
 
       console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
       console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
+      console.log('Recorded data points:', clickData);
       toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px`);
       setShowConfetti(true);
       setTimeout(() => {
@@ -62,7 +82,6 @@ export default function Main() {
       const centerY = (window.innerHeight - redBoxSize) / 2;
       setPosition({ top: centerY, left: centerX });
     } else {
-
       const newBlueBoxSize = getRandomBlueBoxSize();
       setBlueBoxSize(newBlueBoxSize);
       
@@ -81,13 +100,14 @@ export default function Main() {
   };
 
   useEffect(() => {
-
     setBlueBoxSize(getRandomBlueBoxSize());
     
     const centerX = (window.innerWidth - redBoxSize) / 2; 
     const centerY = (window.innerHeight - redBoxSize) / 2; 
     setClicked(0);
     setMovementStartTime(null);  // Reset timer on page load
+    setLastClickTime(null);      // Reset last click time
+    setClickData([]);            // Reset collected data
     setPosition({ top: centerY, left: centerX });
     setIsRedBox(true);
     setTotalDistance(0);
