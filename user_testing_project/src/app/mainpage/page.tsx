@@ -9,10 +9,10 @@ export default function Main() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [isRedBox, setIsRedBox] = useState(true);
   const [blueBoxSize, setBlueBoxSize] = useState(150); 
+  const [movementStartTime, setMovementStartTime] = useState<number | null>(null);
 
   // Box sizes
   const redBoxSize = 10;
-
   const minBlueBoxSize = 20;
   const maxBlueBoxSize = 160;
 
@@ -26,13 +26,21 @@ export default function Main() {
     const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
 
+    if (clicked === 0) {
+      setMovementStartTime(performance.now());
+      console.log('First click — timer started!');
+    }
+
     const newClickCount = clicked + 1;
     setClicked(newClickCount);
 
-    if (newClickCount === 18) {
-      toast('18 clicks done! All set to go!✨✨✅')
-      setShowConfetti(true);
+    if (newClickCount === 18 && movementStartTime !== null) {
+      const endTime = performance.now();
+      const totalTime = endTime - movementStartTime;
 
+      console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
+      toast(`18 clicks done! Total Time: ${totalTime.toFixed(2)} ms`);
+      setShowConfetti(true);
       setTimeout(() => {
         setShowConfetti(false);
       }, 5000);
@@ -72,6 +80,7 @@ export default function Main() {
     const centerX = (window.innerWidth - redBoxSize) / 2; 
     const centerY = (window.innerHeight - redBoxSize) / 2; 
     setClicked(0);
+    setMovementStartTime(null);  // Reset timer on page load
     setPosition({ top: centerY, left: centerX });
     setIsRedBox(true); 
   }, []);
@@ -80,7 +89,7 @@ export default function Main() {
     width: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
     height: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
     backgroundColor: isRedBox ? 'red' : 'skyblue',
-    position: 'absolute',
+    position: 'absolute' as const,
     top: position.top,
     left: position.left,
     cursor: 'pointer'
