@@ -49,10 +49,10 @@ export default function TermsPage() {
             <div className="mt-3">
               <h3 className="font-bold">Research Team:</h3>
               <ul className="list-disc pl-5">
-                <li>Group Member 1 (email.address@mnsu.edu)</li>
-                <li>Group Member 2 (email.address@mnsu.edu)</li>
-                <li>Group Member 3 (email.address@mnsu.edu)</li>
-                <li>Group Member 4 (email.address@mnsu.edu)</li>
+                <li>Sophia Boyt (sophia.boyt@mnsu.edu)</li>
+                <li>Dilasha Shakya</li>
+                <li>Sai Keertana Lakku</li>
+                <li>Ruth Taye</li>
               </ul>
             </div>
             
@@ -68,9 +68,9 @@ export default function TermsPage() {
             
             <p>
               The purpose of this research study is to evaluate how accurately a user can click on 
-              differently-sized circles on screen. During the study, you will be randomly presented with [what?]. 
-              There will be a total of [how many] trials, and each trial will take anywhere from [minimum time] 
-              to [maximum time] seconds, depending on your speed. The entire study should take no longer 
+              differently-sized boxes on screen. During the study, you will be randomly presented []. 
+              There will be a total of 18 trials, and each trial will take anywhere from 1 
+              to 5 seconds, depending on your speed. The entire study should take no longer 
               than [maximum aggregate time of 180 tests] minutes to complete.
             </p>
             

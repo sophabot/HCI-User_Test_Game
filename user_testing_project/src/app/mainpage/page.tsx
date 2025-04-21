@@ -34,8 +34,11 @@ export default function Main() {
       console.log('First click — timer started!');
     }
 
-    const newClickCount = clicked + 1;
-    setClicked(newClickCount);
+    let newClickCount = 0;
+    if (!isRedBox) {
+      newClickCount = clicked + 1;
+      setClicked(newClickCount);
+    }
 
     if (newClickCount === 18 && movementStartTime !== null) {
       const endTime = performance.now();
