@@ -10,6 +10,8 @@ export default function Main() {
   const [isRedBox, setIsRedBox] = useState(true);
   const [blueBoxSize, setBlueBoxSize] = useState(150); 
   const [movementStartTime, setMovementStartTime] = useState<number | null>(null);
+  const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
+  const [totalDistance, setTotalDistance] = useState(0);
 
   // Box sizes
   const redBoxSize = 10;
@@ -28,6 +30,7 @@ export default function Main() {
 
     if (clicked === 0) {
       setMovementStartTime(performance.now());
+      setTotalDistance(0);
       console.log('First click — timer started!');
     }
 
@@ -39,7 +42,8 @@ export default function Main() {
       const totalTime = endTime - movementStartTime;
 
       console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
-      toast(`18 clicks done! Total Time: ${totalTime.toFixed(2)} ms`);
+      console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
+      toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px`);
       setShowConfetti(true);
       setTimeout(() => {
         setShowConfetti(false);
@@ -82,8 +86,30 @@ export default function Main() {
     setClicked(0);
     setMovementStartTime(null);  // Reset timer on page load
     setPosition({ top: centerY, left: centerX });
-    setIsRedBox(true); 
+    setIsRedBox(true);
+    setTotalDistance(0);
+    setLastMousePos(null); 
   }, []);
+
+  // Mouse distance tracking effect
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const { clientX, clientY } = event;
+
+      if (lastMousePos !== null) {
+        const dx = clientX - lastMousePos.x;
+        const dy = clientY - lastMousePos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        setTotalDistance(prev => prev + distance);
+      }
+      setLastMousePos({ x: clientX, y: clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [lastMousePos]);
 
   const squareStyle = {
     width: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
