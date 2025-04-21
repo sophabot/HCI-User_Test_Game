@@ -68,17 +68,18 @@ export default function TermsPage() {
             
             <p>
               The purpose of this research study is to evaluate how accurately a user can click on 
-              differently-sized boxes on screen. During the study, you will be randomly presented []. 
+              differently-sized boxes on screen. During the study, you will be randomly presented 
+              with blue boxes, and you must click them to move on in the test. 
               There will be a total of 18 trials, and each trial will take anywhere from 1 
               to 5 seconds, depending on your speed. The entire study should take no longer 
-              than [maximum aggregate time of 180 tests] minutes to complete.
+              than 20 minutes to complete.
             </p>
             
             <div className="mt-3">
               <h3 className="font-bold">To participate in this study, you must:</h3>
               <ul className="list-disc pl-5">
-                <li>Criterion 1</li>
-                <li>Criterion 2</li>
+                <li>Be physically and mentally capable of completing all 180 trials</li>
+                <li>Be cool</li>
               </ul>
             </div>
             
@@ -102,7 +103,7 @@ export default function TermsPage() {
             
             <p>
               By consenting, you hereby acknowledge that you are at least 18 years of age, and that 
-              you are (other inclusion criteria). You also indicate that you agree to the following statement:
+              you are physically and mentally capable of completing the trial. You also indicate that you agree to the following statement:
             </p>
             
             <p className="italic font-[poppins]">
