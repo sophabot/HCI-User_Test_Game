@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Confetti from 'react-confetti'
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ export default function Main() {
   const [lastClickTime, setLastClickTime] = useState<number | null>(null);
   const [clickData, setClickData] = useState<Array<{size: number, time: number, distance: number}>>([]);
   const [previousBoxPosition, setPreviousBoxPosition] = useState({ top: 0, left: 0 });
+
 
   // Box sizes
   const redBoxSize = 10;
@@ -170,6 +171,8 @@ export default function Main() {
     };
   }, [lastMousePos]);
 
+  const boxRef = useRef<HTMLDivElement>(null);
+
   const squareStyle = {
     width: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
     height: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
@@ -180,8 +183,18 @@ export default function Main() {
     cursor: 'pointer'
   };
 
+  
+
   return (
-    <div className="h-screen flex flex-col items-center">
+    <div className="h-screen flex flex-col items-center"
+    onClick={(e)=>{
+      // If they didn't click on the box
+    if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+      const errorSound = new Audio('/sounds/error.mp3'); 
+      errorSound.play();
+      toast.error("Wrong place! ❌");
+    }
+    }}>
         {showConfetti && <Confetti />}
       <div className="font-semibold text-3xl font-[poppins] mt-6">
         Click on the box!
@@ -190,7 +203,7 @@ export default function Main() {
         No of Clicks: {clicked}
       </p>
     
-      <div className="shadow-lg rounded-lg" style={squareStyle} onClick={handleClick}></div>
+      <div className="shadow-lg rounded-lg" style={squareStyle} onClick={handleClick} ref= {boxRef}></div>
     </div>
   );
 }
