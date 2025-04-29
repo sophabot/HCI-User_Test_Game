@@ -50,9 +50,9 @@ export default function TermsPage() {
               <h3 className="font-bold">Research Team:</h3>
               <ul className="list-disc pl-5">
                 <li>Sophia Boyt (sophia.boyt@mnsu.edu)</li>
-                <li>Dilasha Shakya</li>
-                <li>Sai Keertana Lakku</li>
-                <li>Ruth Taye</li>
+                <li>Dilasha Shakya (dilasha.shakya@mnsu.edu)</li>
+                <li>Sai Keertana Lakku (saikeertana.lakku@mnsu.edu)</li>
+                <li>Ruth Taye (ruth.taye@mnsu.edu)</li>
               </ul>
             </div>
             
