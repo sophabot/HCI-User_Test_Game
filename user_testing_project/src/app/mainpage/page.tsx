@@ -90,17 +90,18 @@ export default function Main() {
     // Update last click time regardless of box color
     setLastClickTime(currentTime);
 
-    if (newClickCount === 18 && movementStartTime !== null) {
+    if (newClickCount === 3 && movementStartTime !== null) {
       const endTime = currentTime;
       const totalTime = endTime - movementStartTime;
 
       console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
       console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
       console.log('Recorded data points:', clickData);
-      toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px`);
+      toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px. If left move to your next test`);
       setShowConfetti(true);
       setTimeout(() => {
         setShowConfetti(false);
+        resetTest();
       }, 5000);
     }
 
@@ -120,14 +121,15 @@ export default function Main() {
       setBlueBoxSize(newBlueBoxSize);
       
       // Random position for blue box 
+      const safeTopOffset = 100; // Keep blue box away from top
       const maxX = window.innerWidth - newBlueBoxSize;
       const maxY = window.innerHeight - newBlueBoxSize;
 
       let newX, newY;
       do {
         newX = Math.floor(Math.random() * maxX);
-        newY = Math.floor(Math.random() * maxY);
-      } while (newX === position.left && newY === position.top);
+        newY = Math.floor(Math.random() * (maxY - safeTopOffset)) + safeTopOffset;
+      } while (newX === position.left && newY === position.top); //shifting it down
 
       setPosition({ top: newY, left: newX });
     }
@@ -183,18 +185,68 @@ export default function Main() {
     cursor: 'pointer'
   };
 
+  //to reset once 18 clicks are done per trial
+  const resetTest = () => {
+    const centerX = (window.innerWidth - redBoxSize) / 2;
+    const centerY = (window.innerHeight - redBoxSize) / 2;
+    const centerPosition = { top: centerY, left: centerX };
+  
+    setClicked(0);
+    setMovementStartTime(null);
+    setLastClickTime(null);
+    setClickData([]);
+    setPosition(centerPosition);
+    setPreviousBoxPosition(centerPosition);
+    setIsRedBox(true);
+    setTotalDistance(0);
+    setLastMousePos(null);
+    setBlueBoxSize(getRandomBlueBoxSize());
+  };
+  
   
 
-  return (
-    <div className="h-screen flex flex-col items-center"
-    onClick={(e)=>{
-      // If they didn't click on the box
-    if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
-      const errorSound = new Audio('/sounds/error.mp3'); 
-      errorSound.play();
-      toast.error("Wrong place! ❌");
+  const handleEndTest = () => {
+    if (movementStartTime !== null && lastClickTime !== null) {
+      const currentTime = performance.now();
+      const totalTime = currentTime - movementStartTime;
+  
+      console.log(`Test ended early. Clicks: ${clicked}`);
+      console.log(`Time taken: ${totalTime.toFixed(2)} ms`);
+      console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px`);
+      console.log('Recorded data points:', clickData);
+  
+      toast(`Test ended early. Clicks: ${clicked}, Time: ${totalTime.toFixed(2)} ms`, {
+        duration: 2000
+      });
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+        resetTest();
+      }, 3000);
+    } else {
+      toast.error("You haven't started the test yet!", {
+        duration: 1500
+      });
     }
-    }}>
+  };
+  
+  const endButtonRef = useRef<HTMLButtonElement>(null);
+
+
+  return (
+    
+    <div className="h-screen flex flex-col items-center"
+    onClick={(e) => {
+      const isBoxClick = boxRef.current?.contains(e.target as Node);
+      const isEndButtonClick = endButtonRef.current?.contains(e.target as Node);
+    
+      if (!isBoxClick && !isEndButtonClick) {
+        const errorSound = new Audio('/sounds/error.mp3');
+        errorSound.play();
+        toast.error("Wrong place! ❌", { duration: 900 });
+      }
+    }}
+    >
         {showConfetti && <Confetti />}
       <div className="font-semibold text-3xl font-[poppins] mt-6">
         Click on the box!
@@ -204,6 +256,14 @@ export default function Main() {
       </p>
     
       <div className="shadow-lg rounded-lg" style={squareStyle} onClick={handleClick} ref= {boxRef}></div>
+      <button
+        ref={endButtonRef}
+        onClick={handleEndTest}
+        className="mt-4 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-all font-[poppins]"
+      >
+        End Test
+      </button>
+
     </div>
   );
 }
