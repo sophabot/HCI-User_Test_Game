@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
-import Confetti from 'react-confetti'
+import Confetti from 'react-confetti';
 import { toast } from 'sonner';
 
 export default function Main() {
@@ -8,46 +8,77 @@ export default function Main() {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
   const [isRedBox, setIsRedBox] = useState(true);
-  const [blueBoxSize, setBlueBoxSize] = useState(150); 
+  const [blueBoxSize, setBlueBoxSize] = useState(150);
   const [movementStartTime, setMovementStartTime] = useState<number | null>(null);
   const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [lastClickTime, setLastClickTime] = useState<number | null>(null);
-  const [clickData, setClickData] = useState<Array<{size: number, time: number, distance: number}>>([]);
+  const [clickData, setClickData] = useState<Array<{ size: number, time: number, distance: number, errors: number }>>([]);
   const [previousBoxPosition, setPreviousBoxPosition] = useState({ top: 0, left: 0 });
+  const [currentErrors, setCurrentErrors] = useState(0);
+  const [totalErrors, setTotalErrors] = useState(0);
 
+  const redBoxSize = 18;
+  const blueBoxSizes = [40, 90, 140];
 
-  // Box sizes
-  const redBoxSize = 10;
-  const minBlueBoxSize = 20;
-  const maxBlueBoxSize = 160;
+  // Define distance multipliers for positioning
+  const distanceMultipliers = [0.2, 0.5, 0.8]; // close, medium, far (as percentage of screen width)
 
-  // Generate random size for blue box
-  const getRandomBlueBoxSize = () => {
-    return Math.floor(Math.random() * (maxBlueBoxSize - minBlueBoxSize + 1)) + minBlueBoxSize;
+  const getNextBlueBoxSize = () => {
+    const randomIndex = Math.floor(Math.random() * blueBoxSizes.length);
+    return blueBoxSizes[randomIndex];
   };
 
-  // Calculate distance between two box centers
-  const calculateBoxDistance = (pos1: { top: number, left: number }, pos2: { top: number, left: number }, size1: number, size2: number) => {
+  // New function to get the next position based on distances
+  const getNextBlueBoxPosition = (blueBoxSize: number) => {
+    // Get screen dimensions
+    const screenWidth = window.innerWidth;
+    const centerX = (screenWidth - redBoxSize) / 2;
+    const centerY = (window.innerHeight - redBoxSize) / 2;
 
+    // Choose a random distance multiplier
+    const randomIndex = Math.floor(Math.random() * distanceMultipliers.length);
+    const distanceMultiplier = distanceMultipliers[randomIndex];
+
+    // Determine if box should go left or right of center (randomly)
+    const goLeft = Math.random() > 0.5;
+
+    // Calculate the position based on screen width and chosen distance
+    const distance = screenWidth * distanceMultiplier;
+
+    // Account for box size in positioning to prevent going off-screen
+    const maxDistance = (screenWidth / 2) - blueBoxSize;
+    const actualDistance = Math.min(distance, maxDistance);
+
+    // Calculate the final position
+    const xPosition = goLeft
+      ? centerX - actualDistance - blueBoxSize / 2
+      : centerX + actualDistance - blueBoxSize / 2;
+
+    // Return position at same y-coordinate as red box
+    return {
+      left: Math.max(0, Math.min(screenWidth - blueBoxSize, xPosition)),
+      top: centerY - (blueBoxSize - redBoxSize) / 2 // Align centers vertically
+    };
+  };
+
+  const calculateBoxDistance = (pos1: { top: number, left: number }, pos2: { top: number, left: number }, size1: number, size2: number) => {
     const center1 = {
       x: pos1.left + size1 / 2,
       y: pos1.top + size1 / 2
     };
-    
+
     const center2 = {
       x: pos2.left + size2 / 2,
       y: pos2.top + size2 / 2
     };
-    
-    // Calculate distance using cool formula 
+
     const dx = center2.x - center1.x;
     const dy = center2.y - center1.y;
     return Math.sqrt(dx * dx + dy * dy);
   };
 
   const handleClick = () => {
-    // Play ding sound on correct click
     const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
 
@@ -57,6 +88,7 @@ export default function Main() {
       setMovementStartTime(currentTime);
       setTotalDistance(0);
       setLastClickTime(currentTime);
+      setTotalErrors(0);
       console.log('First click — timer started!');
     }
 
@@ -64,96 +96,99 @@ export default function Main() {
     if (!isRedBox) {
       newClickCount = clicked + 1;
       setClicked(newClickCount);
-      
-      // Record data point for blue box click
+
       if (lastClickTime !== null) {
         const timeSinceLastClick = currentTime - lastClickTime;
-        
+
         const boxDistance = calculateBoxDistance(
-          position,           // Current blue box pos
-          previousBoxPosition, // Middle pos
-          blueBoxSize,        // Current blue box size
+          position,
+          previousBoxPosition,
+          blueBoxSize,
           redBoxSize
         );
-        
+
         const newDataPoint = {
           size: blueBoxSize,
           time: timeSinceLastClick,
-          distance: boxDistance
+          distance: boxDistance,
+          errors: currentErrors
         };
+
+        // Update clickData with the new point
+        const updatedClickData = [...clickData, newDataPoint];
+        setClickData(updatedClickData);
         
-        setClickData(prev => [...prev, newDataPoint]);
-        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms, Distance=${boxDistance.toFixed(2)}px`);
+        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms, Distance=${boxDistance.toFixed(2)}px, Errors=${currentErrors}`);
+        
+        // Check for test completion after adding the data point
+        if (newClickCount === 18 && movementStartTime !== null) {
+          const endTime = currentTime;
+          const totalTime = endTime - movementStartTime;
+
+          // Use the updated clickData directly, not the state
+          console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
+          console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
+          console.log(`Total errors: ${totalErrors} misclicks 🚫`);
+          
+          // Format data for Excel
+          const excelData = updatedClickData.map(point => 
+            `${point.size},${point.time.toFixed(2)},${point.distance.toFixed(2)},${point.errors}`
+          ).join('\n');
+          
+          console.log('Excel-formatted data:');
+          console.log(excelData);
+          
+          toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px, Errors=${totalErrors}. If left move to your next test`);
+          setShowConfetti(true);
+          setTimeout(() => {
+            setShowConfetti(false);
+            resetTest();
+          }, 5000);
+        }
       }
     }
-    
-    // Update last click time regardless of box color
+
     setLastClickTime(currentTime);
-
-    if (newClickCount === 3 && movementStartTime !== null) {
-      const endTime = currentTime;
-      const totalTime = endTime - movementStartTime;
-
-      console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
-      console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
-      console.log('Recorded data points:', clickData);
-      toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px. If left move to your next test`);
-      setShowConfetti(true);
-      setTimeout(() => {
-        setShowConfetti(false);
-        resetTest();
-      }, 5000);
-    }
-
-    // Save current pos before changing it
     setPreviousBoxPosition({ ...position });
-
-    // Toggle between center box and random generated pos
+    
     const nextIsRedBox = !isRedBox;
     setIsRedBox(nextIsRedBox);
+    setCurrentErrors(0);
 
     if (nextIsRedBox) {
       const centerX = (window.innerWidth - redBoxSize) / 2;
       const centerY = (window.innerHeight - redBoxSize) / 2;
       setPosition({ top: centerY, left: centerX });
     } else {
-      const newBlueBoxSize = getRandomBlueBoxSize();
+      const newBlueBoxSize = getNextBlueBoxSize();
       setBlueBoxSize(newBlueBoxSize);
-      
-      // Random position for blue box 
-      const safeTopOffset = 100; // Keep blue box away from top
-      const maxX = window.innerWidth - newBlueBoxSize;
-      const maxY = window.innerHeight - newBlueBoxSize;
 
-      let newX, newY;
-      do {
-        newX = Math.floor(Math.random() * maxX);
-        newY = Math.floor(Math.random() * (maxY - safeTopOffset)) + safeTopOffset;
-      } while (newX === position.left && newY === position.top); //shifting it down
-
-      setPosition({ top: newY, left: newX });
+      // Use the new positioning function instead of random positions
+      const newPosition = getNextBlueBoxPosition(newBlueBoxSize);
+      setPosition(newPosition);
     }
   };
 
   useEffect(() => {
-    setBlueBoxSize(getRandomBlueBoxSize());
-    
-    const centerX = (window.innerWidth - redBoxSize) / 2; 
-    const centerY = (window.innerHeight - redBoxSize) / 2; 
+    setBlueBoxSize(getNextBlueBoxSize());
+
+    const centerX = (window.innerWidth - redBoxSize) / 2;
+    const centerY = (window.innerHeight - redBoxSize) / 2;
     const centerPosition = { top: centerY, left: centerX };
-    
+
     setClicked(0);
-    setMovementStartTime(null);      // Reset timer on page load
-    setLastClickTime(null);          // Reset last click time
-    setClickData([]);                // Reset collected data
+    setMovementStartTime(null);
+    setLastClickTime(null);
+    setClickData([]);
     setPosition(centerPosition);
     setPreviousBoxPosition(centerPosition);
     setIsRedBox(true);
     setTotalDistance(0);
-    setLastMousePos(null); 
+    setLastMousePos(null);
+    setCurrentErrors(0);
+    setTotalErrors(0);
   }, []);
 
-  // Mouse distance tracking effect
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       const { clientX, clientY } = event;
@@ -185,12 +220,11 @@ export default function Main() {
     cursor: 'pointer'
   };
 
-  //to reset once 18 clicks are done per trial
   const resetTest = () => {
     const centerX = (window.innerWidth - redBoxSize) / 2;
     const centerY = (window.innerHeight - redBoxSize) / 2;
     const centerPosition = { top: centerY, left: centerX };
-  
+
     setClicked(0);
     setMovementStartTime(null);
     setLastClickTime(null);
@@ -200,22 +234,30 @@ export default function Main() {
     setIsRedBox(true);
     setTotalDistance(0);
     setLastMousePos(null);
-    setBlueBoxSize(getRandomBlueBoxSize());
+    setBlueBoxSize(getNextBlueBoxSize());
+    setCurrentErrors(0);
+    setTotalErrors(0);
   };
-  
-  
 
   const handleEndTest = () => {
     if (movementStartTime !== null && lastClickTime !== null) {
       const currentTime = performance.now();
       const totalTime = currentTime - movementStartTime;
-  
+
       console.log(`Test ended early. Clicks: ${clicked}`);
       console.log(`Time taken: ${totalTime.toFixed(2)} ms`);
       console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px`);
-      console.log('Recorded data points:', clickData);
-  
-      toast(`Test ended early. Clicks: ${clicked}, Time: ${totalTime.toFixed(2)} ms`, {
+      console.log(`Total errors: ${totalErrors} misclicks 🚫`);
+      
+      // Format data for Excel
+      const excelData = clickData.map(point => 
+        `${point.size},${point.time.toFixed(2)},${point.distance.toFixed(2)},${point.errors}`
+      ).join('\n');
+      
+      console.log('Excel-formatted data:');
+      console.log(excelData);
+
+      toast(`Test ended early. Clicks: ${clicked}, Time: ${totalTime.toFixed(2)} ms, Errors: ${totalErrors}`, {
         duration: 2000
       });
       setShowConfetti(true);
@@ -229,33 +271,34 @@ export default function Main() {
       });
     }
   };
-  
+
   const endButtonRef = useRef<HTMLButtonElement>(null);
 
-
   return (
-    
-    <div className="h-screen flex flex-col items-center"
-    onClick={(e) => {
-      const isBoxClick = boxRef.current?.contains(e.target as Node);
-      const isEndButtonClick = endButtonRef.current?.contains(e.target as Node);
-    
-      if (!isBoxClick && !isEndButtonClick) {
-        const errorSound = new Audio('/sounds/error.mp3');
-        errorSound.play();
-        toast.error("Wrong place! ❌", { duration: 900 });
-      }
-    }}
+    <div
+      className="h-screen flex flex-col items-center"
+      onClick={(e) => {
+        const isBoxClick = boxRef.current?.contains(e.target as Node);
+        const isEndButtonClick = endButtonRef.current?.contains(e.target as Node);
+
+        if (!isBoxClick && !isEndButtonClick) {
+          const errorSound = new Audio('/sounds/error.mp3');
+          errorSound.play();
+
+          setCurrentErrors(prev => prev + 1);
+          setTotalErrors(prev => prev + 1);
+        }
+      }}
     >
-        {showConfetti && <Confetti />}
+      {showConfetti && <Confetti />}
       <div className="font-semibold text-3xl font-[poppins] mt-6">
         Click on the box!
       </div>
       <p className="font-[poppins] text-gray-500">
-        No of Clicks: {clicked}
+        No of Clicks: {clicked} | Errors: {totalErrors}
       </p>
-    
-      <div className="shadow-lg rounded-lg" style={squareStyle} onClick={handleClick} ref= {boxRef}></div>
+
+      <div className="shadow-lg rounded-lg" style={squareStyle} onClick={handleClick} ref={boxRef}></div>
       <button
         ref={endButtonRef}
         onClick={handleEndTest}
@@ -263,7 +306,6 @@ export default function Main() {
       >
         End Test
       </button>
-
     </div>
   );
 }
