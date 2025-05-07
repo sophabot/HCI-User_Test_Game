@@ -13,55 +13,51 @@ export default function Main() {
   const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [lastClickTime, setLastClickTime] = useState<number | null>(null);
-  const [clickData, setClickData] = useState<Array<{ size: number, time: number, distance: number, errors: number }>>([]);
+  const [clickData, setClickData] = useState<Array<{ size: number, time: number, distance: number, distanceMultiplier?: number, errors: number }>>([]);
   const [previousBoxPosition, setPreviousBoxPosition] = useState({ top: 0, left: 0 });
   const [currentErrors, setCurrentErrors] = useState(0);
   const [totalErrors, setTotalErrors] = useState(0);
+  const [currentDistanceMultiplier, setCurrentDistanceMultiplier] = useState<number>(0.2);
 
+  // Red box size for center reset
   const redBoxSize = 18;
   const blueBoxSizes = [40, 90, 140];
 
-  // Define distance multipliers for positioning
-  const distanceMultipliers = [0.2, 0.5, 0.8]; // close, medium, far (as percentage of screen width)
+  const distanceMultipliers = [0.2, 0.5, 0.8];
 
+  // Blue box size is randomly selected from the array of sizes
   const getNextBlueBoxSize = () => {
     const randomIndex = Math.floor(Math.random() * blueBoxSizes.length);
     return blueBoxSizes[randomIndex];
   };
 
-  // New function to get the next position based on distances
+  // Get the next position for the blue box based on the distance multiplier
   const getNextBlueBoxPosition = (blueBoxSize: number) => {
-    // Get screen dimensions
     const screenWidth = window.innerWidth;
     const centerX = (screenWidth - redBoxSize) / 2;
     const centerY = (window.innerHeight - redBoxSize) / 2;
 
-    // Choose a random distance multiplier
     const randomIndex = Math.floor(Math.random() * distanceMultipliers.length);
     const distanceMultiplier = distanceMultipliers[randomIndex];
 
-    // Determine if box should go left or right of center (randomly)
+    setCurrentDistanceMultiplier(distanceMultiplier);
+
     const goLeft = Math.random() > 0.5;
-
-    // Calculate the position based on screen width and chosen distance
     const distance = screenWidth * distanceMultiplier;
-
-    // Account for box size in positioning to prevent going off-screen
     const maxDistance = (screenWidth / 2) - blueBoxSize;
     const actualDistance = Math.min(distance, maxDistance);
 
-    // Calculate the final position
     const xPosition = goLeft
       ? centerX - actualDistance - blueBoxSize / 2
       : centerX + actualDistance - blueBoxSize / 2;
 
-    // Return position at same y-coordinate as red box
     return {
       left: Math.max(0, Math.min(screenWidth - blueBoxSize, xPosition)),
-      top: centerY - (blueBoxSize - redBoxSize) / 2 // Align centers vertically
+      top: centerY - (blueBoxSize - redBoxSize) / 2
     };
   };
 
+  // Calculate the distance between two boxes
   const calculateBoxDistance = (pos1: { top: number, left: number }, pos2: { top: number, left: number }, size1: number, size2: number) => {
     const center1 = {
       x: pos1.left + size1 / 2,
@@ -78,12 +74,14 @@ export default function Main() {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
+  // Handle click event on the blue box
   const handleClick = () => {
     const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
 
     const currentTime = performance.now();
 
+    // If this is the first click, start the timer and reset distances
     if (clicked === 0) {
       setMovementStartTime(currentTime);
       setTotalDistance(0);
@@ -94,6 +92,7 @@ export default function Main() {
 
     let newClickCount = 0;
     if (!isRedBox) {
+      // If the box is blue, calculate the distance and time since last click
       newClickCount = clicked + 1;
       setClicked(newClickCount);
 
@@ -111,33 +110,31 @@ export default function Main() {
           size: blueBoxSize,
           time: timeSinceLastClick,
           distance: boxDistance,
+          distanceMultiplier: currentDistanceMultiplier,
           errors: currentErrors
         };
 
-        // Update clickData with the new point
         const updatedClickData = [...clickData, newDataPoint];
         setClickData(updatedClickData);
-        
+
         console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms, Distance=${boxDistance.toFixed(2)}px, Errors=${currentErrors}`);
-        
-        // Check for test completion after adding the data point
+
+        // Calculate the total distance moved
         if (newClickCount === 18 && movementStartTime !== null) {
           const endTime = currentTime;
           const totalTime = endTime - movementStartTime;
 
-          // Use the updated clickData directly, not the state
           console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
           console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
           console.log(`Total errors: ${totalErrors} misclicks 🚫`);
-          
-          // Format data for Excel
-          const excelData = updatedClickData.map(point => 
-            `${point.size},${point.time.toFixed(2)},${point.distance.toFixed(2)},${point.errors}`
+
+          const excelData = updatedClickData.map(point =>
+            `${point.size},${point.time.toFixed(2)},${point.distanceMultiplier || 0.2},${point.errors}`
           ).join('\n');
-          
+
           console.log('Excel-formatted data:');
           console.log(excelData);
-          
+
           toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px, Errors=${totalErrors}. If left move to your next test`);
           setShowConfetti(true);
           setTimeout(() => {
@@ -150,11 +147,12 @@ export default function Main() {
 
     setLastClickTime(currentTime);
     setPreviousBoxPosition({ ...position });
-    
+
     const nextIsRedBox = !isRedBox;
     setIsRedBox(nextIsRedBox);
     setCurrentErrors(0);
 
+    // Calculate the distance to the next box or put in center if red
     if (nextIsRedBox) {
       const centerX = (window.innerWidth - redBoxSize) / 2;
       const centerY = (window.innerHeight - redBoxSize) / 2;
@@ -163,12 +161,12 @@ export default function Main() {
       const newBlueBoxSize = getNextBlueBoxSize();
       setBlueBoxSize(newBlueBoxSize);
 
-      // Use the new positioning function instead of random positions
       const newPosition = getNextBlueBoxPosition(newBlueBoxSize);
       setPosition(newPosition);
     }
   };
 
+  
   useEffect(() => {
     setBlueBoxSize(getNextBlueBoxSize());
 
@@ -220,6 +218,7 @@ export default function Main() {
     cursor: 'pointer'
   };
 
+    // Reset the test to its initial state
   const resetTest = () => {
     const centerX = (window.innerWidth - redBoxSize) / 2;
     const centerY = (window.innerHeight - redBoxSize) / 2;
@@ -239,6 +238,7 @@ export default function Main() {
     setTotalErrors(0);
   };
 
+  // Handle forceful end of test
   const handleEndTest = () => {
     if (movementStartTime !== null && lastClickTime !== null) {
       const currentTime = performance.now();
@@ -248,12 +248,13 @@ export default function Main() {
       console.log(`Time taken: ${totalTime.toFixed(2)} ms`);
       console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px`);
       console.log(`Total errors: ${totalErrors} misclicks 🚫`);
-      
-      // Format data for Excel
-      const excelData = clickData.map(point => 
-        `${point.size},${point.time.toFixed(2)},${point.distance.toFixed(2)},${point.errors}`
-      ).join('\n');
-      
+
+      const excelData = clickData.map(point => {
+        const multiplier = point.distanceMultiplier || 0.2;
+        return `${point.size},${point.time.toFixed(2)},${multiplier},${point.errors}`;
+      }).join('\n');
+
+      // Log the data in a format suitable for Excel
       console.log('Excel-formatted data:');
       console.log(excelData);
 
