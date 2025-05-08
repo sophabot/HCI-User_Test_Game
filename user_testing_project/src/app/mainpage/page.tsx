@@ -18,12 +18,29 @@ export default function Main() {
   const [currentErrors, setCurrentErrors] = useState(0);
   const [totalErrors, setTotalErrors] = useState(0);
   const [currentDistanceMultiplier, setCurrentDistanceMultiplier] = useState<number>(0.2);
+  
+  // Tracking for test completion
+  const [testCompleted, setTestCompleted] = useState(false);
+  
+  // New states for tracking multiple tests
+  const [testCount, setTestCount] = useState(0);
+  const [allTestsData, setAllTestsData] = useState<Array<{ size: number, time: number, distanceMultiplier: number, errors: number, testNumber: number }>>([]); 
+  const [userId, setUserId] = useState<string>('');
+  const boxRef = useRef<HTMLDivElement>(null);
 
-  // Red box size for center reset
+  // Constants for test configuration
   const redBoxSize = 18;
   const blueBoxSizes = [40, 90, 140];
-
   const distanceMultipliers = [0.2, 0.5, 0.8];
+  const clicksPerTest = 18; // Number of clicks needed to complete a test
+
+  // Generate a random user ID on first load
+  useEffect(() => {
+    // Generate a random user ID (8 characters)
+    const randomUserId = Math.random().toString(36).substring(2, 10);
+    setUserId(randomUserId);
+    console.log(`User ID for this session: ${randomUserId}`);
+  }, []);
 
   // Blue box size is randomly selected from the array of sizes
   const getNextBlueBoxSize = () => {
@@ -74,7 +91,33 @@ export default function Main() {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Handle click event on the blue box
+  // Create and download CSV file with all test data
+  const generateCSVFile = () => {
+    // Add header row (removed distance_px column)
+    const csvContent = [
+      "user_id,test_number,size,time_ms,distance_multiplier,errors",
+      ...allTestsData.map(point => 
+        `${userId},${point.testNumber},${point.size},${point.time.toFixed(2)},${point.distanceMultiplier},${point.errors}`
+      )
+    ].join('\n');
+
+    // Create a blob with the CSV data
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a link and trigger download
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `user_test_data_${userId}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log(`CSV file generated with ${allTestsData.length} data points!`);
+  };
+
+  // Handle click event on the box
   const handleClick = () => {
     const clickSound = new Audio('/sounds/correct.mp3');
     clickSound.play();
@@ -86,8 +129,10 @@ export default function Main() {
       setMovementStartTime(currentTime);
       setTotalDistance(0);
       setLastClickTime(currentTime);
+      setCurrentErrors(0);
       setTotalErrors(0);
-      console.log('First click — timer started!');
+      setTestCompleted(false);
+      console.log(`Test ${testCount + 1} started!`);
     }
 
     let newClickCount = 0;
@@ -117,30 +162,57 @@ export default function Main() {
         const updatedClickData = [...clickData, newDataPoint];
         setClickData(updatedClickData);
 
-        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms, Distance=${boxDistance.toFixed(2)}px, Errors=${currentErrors}`);
+        console.log(`Recorded click: Size=${blueBoxSize}px, Time=${timeSinceLastClick.toFixed(2)}ms, Errors=${currentErrors}`);
 
-        // Calculate the total distance moved
-        if (newClickCount === 18 && movementStartTime !== null) {
+        // Check if this is the last click of the test (blue click #9 = 18 total clicks)
+        if (newClickCount === clicksPerTest && !testCompleted) {
+          setTestCompleted(true);
           const endTime = currentTime;
-          const totalTime = endTime - movementStartTime;
+          const totalTime = endTime - (movementStartTime || currentTime);
 
-          console.log(`Time taken for 18 clicks: ${totalTime.toFixed(2)} ms ✅`);
-          console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px 🧠`);
+          console.log(`Test ${testCount + 1} completed with ${updatedClickData.length} blue box clicks`);
+          console.log(`Time taken for test: ${totalTime.toFixed(2)} ms ✅`);
           console.log(`Total errors: ${totalErrors} misclicks 🚫`);
 
-          const excelData = updatedClickData.map(point =>
-            `${point.size},${point.time.toFixed(2)},${point.distanceMultiplier || 0.2},${point.errors}`
-          ).join('\n');
+          const currentTestNumber = testCount + 1;
+          
+          // Add test number to each data point and store in all tests data
+          const dataWithTestNumber = updatedClickData.map(point => ({
+            size: point.size,
+            time: point.time,
+            distanceMultiplier: point.distanceMultiplier || currentDistanceMultiplier,
+            errors: point.errors,
+            testNumber: currentTestNumber
+          }));
+          
+          setAllTestsData(prevData => [...prevData, ...dataWithTestNumber]);
+          
+          // Increment test count
+          const newTestCount = currentTestNumber;
+          setTestCount(newTestCount);
 
-          console.log('Excel-formatted data:');
-          console.log(excelData);
-
-          toast(`18 clicks done! Time: ${totalTime.toFixed(2)} ms, Distance: ${totalDistance.toFixed(2)} px, Errors=${totalErrors}. If left move to your next test`);
+          // Show success message
+          toast(`Test ${currentTestNumber} complete! Time: ${totalTime.toFixed(2)} ms, Errors: ${totalErrors}`);
+          
           setShowConfetti(true);
           setTimeout(() => {
             setShowConfetti(false);
+            
+            // Check if we've completed all 10 tests
+            if (newTestCount >= 10) {
+              // Show final success message and generate CSV
+              toast.success(`All 10 tests completed! Generating CSV file...`, {
+                duration: 5000
+              });
+              
+              // Short delay before generating the file to ensure UI updates
+              setTimeout(() => {
+                generateCSVFile();
+              }, 1000);
+            }
+            
             resetTest();
-          }, 5000);
+          }, 3000);
         }
       }
     }
@@ -166,10 +238,8 @@ export default function Main() {
     }
   };
 
-  
-  useEffect(() => {
-    setBlueBoxSize(getNextBlueBoxSize());
-
+  // Reset the test to its initial state
+  const resetTest = () => {
     const centerX = (window.innerWidth - redBoxSize) / 2;
     const centerY = (window.innerHeight - redBoxSize) / 2;
     const centerPosition = { top: centerY, left: centerX };
@@ -183,10 +253,37 @@ export default function Main() {
     setIsRedBox(true);
     setTotalDistance(0);
     setLastMousePos(null);
+    setBlueBoxSize(getNextBlueBoxSize());
     setCurrentErrors(0);
-    setTotalErrors(0);
-  }, []);
+    setTestCompleted(false);
+  };
 
+  // Handle forceful end of test
+  const handleEndTest = () => {
+    if (movementStartTime !== null && lastClickTime !== null) {
+      const currentTime = performance.now();
+      const totalTime = currentTime - movementStartTime;
+
+      console.log(`Test ended early. Clicks: ${clicked}`);
+      console.log(`Time taken: ${totalTime.toFixed(2)} ms`);
+      console.log(`Total errors: ${totalErrors} misclicks 🚫`);
+
+      toast(`Test ended early. Clicks: ${clicked}, Time: ${totalTime.toFixed(2)} ms, Errors: ${totalErrors}`, {
+        duration: 2000
+      });
+      
+      // Don't add incomplete tests to allTestsData
+      
+      setShowConfetti(false);
+      resetTest();
+    } else {
+      toast.error("You haven't started the test yet!", {
+        duration: 1500
+      });
+    }
+  };
+
+  // Mouse movement tracking
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       const { clientX, clientY } = event;
@@ -206,20 +303,10 @@ export default function Main() {
     };
   }, [lastMousePos]);
 
-  const boxRef = useRef<HTMLDivElement>(null);
+  // Initial setup
+  useEffect(() => {
+    setBlueBoxSize(getNextBlueBoxSize());
 
-  const squareStyle = {
-    width: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
-    height: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
-    backgroundColor: isRedBox ? 'red' : 'skyblue',
-    position: 'absolute' as const,
-    top: position.top,
-    left: position.left,
-    cursor: 'pointer'
-  };
-
-    // Reset the test to its initial state
-  const resetTest = () => {
     const centerX = (window.innerWidth - redBoxSize) / 2;
     const centerY = (window.innerHeight - redBoxSize) / 2;
     const centerPosition = { top: centerY, left: centerX };
@@ -233,61 +320,39 @@ export default function Main() {
     setIsRedBox(true);
     setTotalDistance(0);
     setLastMousePos(null);
-    setBlueBoxSize(getNextBlueBoxSize());
     setCurrentErrors(0);
     setTotalErrors(0);
-  };
-
-  // Handle forceful end of test
-  const handleEndTest = () => {
-    if (movementStartTime !== null && lastClickTime !== null) {
-      const currentTime = performance.now();
-      const totalTime = currentTime - movementStartTime;
-
-      console.log(`Test ended early. Clicks: ${clicked}`);
-      console.log(`Time taken: ${totalTime.toFixed(2)} ms`);
-      console.log(`Total mouse movement distance: ${totalDistance.toFixed(2)} px`);
-      console.log(`Total errors: ${totalErrors} misclicks 🚫`);
-
-      const excelData = clickData.map(point => {
-        const multiplier = point.distanceMultiplier || 0.2;
-        return `${point.size},${point.time.toFixed(2)},${multiplier},${point.errors}`;
-      }).join('\n');
-
-      // Log the data in a format suitable for Excel
-      console.log('Excel-formatted data:');
-      console.log(excelData);
-
-      toast(`Test ended early. Clicks: ${clicked}, Time: ${totalTime.toFixed(2)} ms, Errors: ${totalErrors}`, {
-        duration: 2000
-      });
-      setShowConfetti(true);
-      setTimeout(() => {
-        setShowConfetti(false);
-        resetTest();
-      }, 3000);
-    } else {
-      toast.error("You haven't started the test yet!", {
-        duration: 1500
-      });
-    }
-  };
+    setTestCompleted(false);
+  }, []);
 
   const endButtonRef = useRef<HTMLButtonElement>(null);
+
+  const squareStyle = {
+    width: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
+    height: isRedBox ? `${redBoxSize}px` : `${blueBoxSize}px`,
+    backgroundColor: isRedBox ? 'red' : 'skyblue',
+    position: 'absolute' as const,
+    top: position.top,
+    left: position.left,
+    cursor: 'pointer'
+  };
 
   return (
     <div
       className="h-screen flex flex-col items-center"
       onClick={(e) => {
-        const isBoxClick = boxRef.current?.contains(e.target as Node);
-        const isEndButtonClick = endButtonRef.current?.contains(e.target as Node);
+        // Only count errors when blue box is active (not red box)
+        if (!isRedBox && !testCompleted) {
+          const isBoxClick = boxRef.current?.contains(e.target as Node);
+          const isEndButtonClick = endButtonRef.current?.contains(e.target as Node);
 
-        if (!isBoxClick && !isEndButtonClick) {
-          const errorSound = new Audio('/sounds/error.mp3');
-          errorSound.play();
+          if (!isBoxClick && !isEndButtonClick) {
+            const errorSound = new Audio('/sounds/error.mp3');
+            errorSound.play();
 
-          setCurrentErrors(prev => prev + 1);
-          setTotalErrors(prev => prev + 1);
+            setCurrentErrors(prev => prev + 1);
+            setTotalErrors(prev => prev + 1);
+          }
         }
       }}
     >
@@ -296,7 +361,10 @@ export default function Main() {
         Click on the box!
       </div>
       <p className="font-[poppins] text-gray-500">
-        No of Clicks: {clicked} | Errors: {totalErrors}
+        No of Clicks: {clicked} | Errors: {totalErrors} | Test: {testCount}/10
+      </p>
+      <p className="font-[poppins] text-gray-400 text-sm">
+        User ID: {userId}
       </p>
 
       <div className="shadow-lg rounded-lg" style={squareStyle} onClick={handleClick} ref={boxRef}></div>
@@ -307,6 +375,15 @@ export default function Main() {
       >
         End Test
       </button>
+      
+      {testCount >= 10 && (
+        <button
+          onClick={generateCSVFile}
+          className="mt-2 px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-all font-[poppins]"
+        >
+          Download CSV Data
+        </button>
+      )}
     </div>
   );
 }
